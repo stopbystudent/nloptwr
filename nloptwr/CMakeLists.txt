@@ -3,8 +3,6 @@
 
 set(NLOPWR_INCLUDE_FILES 
     include/nloptwr/omphelper.h
-    include/nloptwr/gauss.h
-    include/nloptwr/lregx.h
     include/nloptwr/nloptwralgorithm.h
     include/nloptwr/nloptwrsearchalgoparam.h
     include/nloptwr/nloptwrsearchalgoparam2.h
@@ -22,8 +20,6 @@ set(NLOPWR_INCLUDE_FILES
 # compile all cpp files
 set( nloptwr_SRCS 
     src/omphelper.cpp
-    src/gauss.cpp
-    src/lregx.cpp
     src/nloptwralgorithm.cpp
     src/nloptwrsearchalgoparam.cpp
     src/nloptwrsearchalgoparam2.cpp

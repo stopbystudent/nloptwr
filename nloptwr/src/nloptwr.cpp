@@ -9,7 +9,6 @@
 
 #include "nloptwr/nloptwrparamfactory.h"
 #include "nloptwr/nloptwrsstrat.h"
-#include "nloptwr/lregx.h"
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -54,21 +53,13 @@ NLOptWrapper::NLOptWrapper (
 
   initial_step.resize ( nDim );
   initialSubStep.resize ( nDim );
-  // ### fOpt=1.0e99;
+  fOpt=1.0e99;
 
   if ( x.size() !=nDim ) x.resize ( nDim );
 
   // if (xVec.size()!=nDim) xVec.resize(nDim);
   // if (cVec.size()!=mDim) cVec.resize(mDim);
 
-  /*
-  // NOTE: bugtest
-  if (static_cast<long int>(fArgs.x.capacity())<=nDim+10) fArgs.x.reserve ( nDim+20 );
-  
-  if (static_cast<long int>(fArgs.x.capacity())<=nDim+10) fArgs.x.reserve ( nDim+20 );
-  if (static_cast<long int>(fArgs.c.size())<=mDim+10) fArgs.c.reserve ( mDim+20 );
-  */
-  
   if (static_cast<long int>(fArgs.x.size()) !=nDim) fArgs.x.resize ( nDim );  // vector of arguments (nDim)
   if (static_cast<long int>(fArgs.c.size()) !=mDim ) fArgs.c.resize ( mDim );  // vector of single constraints (mDim)
   if (static_cast<long int>(lb.size()) !=nDim ) lb.resize ( nDim );
@@ -106,8 +97,6 @@ NLOptWrapper::NLOptWrapper (
   useNewDerivMethod=false;
   derivRegrDim=3;
   
-  derivRegrNoSteps=0;
-  initLxReg();
   optTime=0.0;
   
   searchMin = true;
@@ -330,7 +319,6 @@ bool NLOptWrapper::getSearchMin() const {
 double NLOptWrapper::getLastOptimumValue() const {
     return fOpt;
 }
-
 // ------------------------------------------------------------------------------------------------
 // ================================================================================================
 
@@ -341,6 +329,8 @@ nlopt::result NLOptWrapper::optimize (
   int maxEvals
 )
 {
+    fOpt = ((searchMin)? numeric_limits<int>::max() : numeric_limits<int>::min());
+
     if (optFknBases.empty()) {
       const string errMsg2 ( "NLOptWrapper::optimize : ERROR: optFknBases.empty() " );
       cerr << errMsg2 << endl;
@@ -430,7 +420,6 @@ nlopt::result NLOptWrapper::optimize (
 
 
   // =====================================================
-  // BEGIN(NEW implementation)
   // =====================================================
 
   std::vector<NLOptWrAlgorithm> algs = getSelectedAlgorithms ( nloptWrSStrat );
@@ -534,8 +523,7 @@ nlopt::result NLOptWrapper::optimize (
       sub_opt.set_upper_bounds(ub);
       sub_opt.set_lower_bounds(lb);
 
-    // set min or max objective
-    if (searchMin) {
+  if (searchMin) {
         // set min objective
         sub_opt.set_min_objective(
         [](unsigned int n, const double *x, double *grad, void *my_func_data)->double {
@@ -544,7 +532,6 @@ nlopt::result NLOptWrapper::optimize (
         this // ORIGINAL &data
         );
     } else {
-        // set max objective
         sub_opt.set_max_objective(
         [](unsigned int n, const double *x, double *grad, void *my_func_data)->double {
             return reinterpret_cast<NLOptWrapper*>(my_func_data)->f(n, x, grad);
@@ -552,7 +539,7 @@ nlopt::result NLOptWrapper::optimize (
         this // ORIGINAL &data
         );
     }
-  
+
     sub_opt.set_default_initial_step(initial_step);
 
     // TODO: set tolerances of 2nd algoritm
@@ -606,14 +593,7 @@ nlopt::result NLOptWrapper::optimize (
 
     }
 
-  // =====================================================
-  // END(NEW implementation)
-  // =====================================================
-
   cout.flush();
-
-  // set optimum value to worst alue
-  fOpt = ((searchMin)? numeric_limits<int>::max() : numeric_limits<int>::min());
 
   // optimization
   nlopt::result opt_stat = opt->optimize ( x, fOpt );
@@ -760,77 +740,64 @@ bool NLOptWrapper::setXVec ( unsigned int n, const double* x1 )
 // ===================================================================
 // ===================================================================
 
-
-bool NLOptWrapper::getNewDerivMethod() const {
-    return useNewDerivMethod;
-}
-void NLOptWrapper::setNewDerivMethod(bool val) {
-    useNewDerivMethod=val;
-}
-
-
-std::size_t NLOptWrapper::getDerivRegrDim() const {
-    return derivRegrDim;
-}
-
-void NLOptWrapper::setDerivRegrDim(size_t d) {
-    for (size_t i=0; i<nThreads; i++) {
-        lregxVec[i]->resize(d);
-    }
-    derivRegrDim=d;
-}
-
-std::size_t NLOptWrapper::getDerivRegrNoSteps() const {
-    return derivRegrNoSteps;
-}
-
-
-void NLOptWrapper::setDerivRegrNoSteps(std::size_t val) {
-    if (val < 2*derivRegrDim+1) val=2*derivRegrDim+1;
-    
-    derivRegrNoSteps=val;
-}
-
 double NLOptWrapper::getOptTime() const {
  return optTime;   
 }
-
-// TODO
-void NLOptWrapper::initLxReg() {
-  lregxVec.resize(nThreads);
-  lregxVecC.resize(nThreads);
-  
-  if (derivRegrNoSteps<=0) derivRegrNoSteps=2*derivRegrDim;
-  
-  for ( size_t i=0; i<nThreads; i++ ) {
-      lregxVec[i]= std::shared_ptr<utilx::LRegX>(new utilx::LRegX(derivRegrDim));
-      lregxVecC[i].resize(mDim);
-      for ( size_t j=0; j<mDim; j++ ) {
-          lregxVecC[i][j]= std::shared_ptr<utilx::LRegX>(new utilx::LRegX(derivRegrDim));
-      }
-  }
-}
-
 
 // ===================================================================
 // ===================================================================
 
 double NLOptWrapper::f ( unsigned n, const double *x1, double *fGradVal )
 {
-  bool useGradient = ( fGradVal!=nullptr ) ? true : false;
+  if ( fArgs.x.size() !=n ) fArgs.x.resize ( n );
+  for ( size_t i=0; i<n; ++i) fArgs.x[i] = x1[i];
 
-  // function call
-  calcFktnConstrAndDeriv ( n, x1, useGradient );
+    
+    // function call
+    // calcFktnConstrAndDeriv ( n, x1, useGradient );
 
-  if ( useGradient )
-    {
-      for ( unsigned int i=0; i<n; i++ )
+    // 1.)   call fOld=optF(...)
+    double fVal = optFknBases[0]->optF( fArgs.x );
+
+    // 2. calculate gradient
+    if ( fGradVal!=nullptr ) {
+        for ( size_t j=0; j<nThreads; j++ )
         {
-          fGradVal[i] = fGrad[i];
+            fArgs1[j].x=fArgs.x;
+            fArgs2[j].x=fArgs.x;
         }
-    }
 
-  return fArgs.f;
+        // ORI: #pragma omp parallel shared(optFknBases, fArgs, fArgs1, fArgs2, nDim, mDim, fGrad ) num_threads(nThreads)
+        #pragma omp parallel default(shared) num_threads(nThreads)
+        {
+        #pragma omp for schedule(static)
+        for (long int i=0; i<nDim; i++ )
+            {
+            size_t j=utl::OmpHelper::getThreadNum();
+
+            double dx = dX[i];
+            double half_dx = 0.5/dx;
+
+            double xOld=fArgs1[j].x[i];
+            fArgs2[j].x[i]= ( xOld+dx );
+            fArgs1[j].x[i]= ( xOld-dx );
+
+            // function calls
+            fArgs2[j].f = optFknBases[j]->optF( fArgs2[j].x );
+            fArgs1[j].f = optFknBases[j]->optF( fArgs1[j].x );
+
+            fGrad[i] = ( fArgs2[j].f - fArgs1[j].f ) *half_dx;
+
+            fArgs2[j].x[i]=xOld;
+            fArgs1[j].x[i]=xOld;
+            }
+
+        }
+        for ( unsigned int i=0; i<n; i++ ) fGradVal[i] = fGrad[i];
+
+    } // useGradient
+
+    return fVal;
 }
 
 // ===================================================================
@@ -844,50 +811,18 @@ void NLOptWrapper::multi_constraint (
   double *cGradc  // gradient of constraints
 )
 {
+  if ( fArgs.x.size() !=n ) fArgs.x.resize ( n );
+  for ( size_t i=0; i<n; ++i) fArgs.x[i] = x[i];
 
-  bool useGradient = ( cGradc!=nullptr ) ? true : false;
+  // =================================================================
 
-  // function call
-  calcFktnConstrAndDeriv ( n, x, useGradient );
-
-  for ( unsigned int k=0; k<m; k++ )
-    {
-      c[k] = fArgs.c[k];
-      if ( useGradient ) 
-        {
-          for ( unsigned int i=0; i<n; i++ )
-            {
-              cGradc[k*n+i] = cGrad[k][i];
-            }
-        }
-    }
-}
+    // 1.) calculate constraints
+    optFknBases[0]->optC( fArgs.x, fArgs.c );
+    for ( unsigned int k=0; k<m; k++ ) c[k] = fArgs.c[k];
 
 
-// ===================================================================
-// ===================================================================
-
-// virtual
-void NLOptWrapper::calcFktnConstrAndDeriv ( unsigned n, const double *x1, bool useGrad ) {
-    if (useNewDerivMethod) {
-        calcFktnConstrAndDerivNew (n, x1, useGrad );
-    } else {
-        calcFktnConstrAndDerivOld (n, x1, useGrad );
-    }
-    
-}
-
-// ===================================================================
-// ===================================================================
-
-// virtual
-void NLOptWrapper::calcFktnConstrAndDerivOld ( unsigned n, const double *x1, bool useGrad )
-{
-
-  if ( setXVec ( n, x1 ) )
-    {
-      if ( useGrad || useGradient )
-      // if ( useGrad && useGradient )
+    // 2.) calculate gradient of gradients
+    if (cGradc!=nullptr)
         {
           for ( size_t j=0; j<nThreads; j++ )
             {
@@ -911,11 +846,8 @@ void NLOptWrapper::calcFktnConstrAndDerivOld ( unsigned n, const double *x1, boo
                 fArgs1[j].x[i]= ( xOld-dx );
 
                 // function calls
-                fArgs2[j].f = optFknBases[j]->optFktn ( fArgs2[j].x, fArgs2[j].c );
-                fArgs1[j].f = optFknBases[j]->optFktn ( fArgs1[j].x, fArgs1[j].c );
-
-
-                fGrad[i] = ( fArgs2[j].f - fArgs1[j].f ) *half_dx;
+                optFknBases[j]->optC( fArgs2[j].x, fArgs2[j].c );
+                optFknBases[j]->optC( fArgs1[j].x, fArgs1[j].c );
 
                 for ( size_t k=0; k<mDim; k++ )
                   {
@@ -928,105 +860,14 @@ void NLOptWrapper::calcFktnConstrAndDerivOld ( unsigned n, const double *x1, boo
 
           }
 
+        for ( unsigned int k=0; k<m; k++ )
+                for ( unsigned int i=0; i<n; i++ )
+                    cGradc[k*n+i] = cGrad[k][i];
+
+            
         } // useGradient
 
-      // 2.)   call fOld=optF(...)
-      fArgs.f = optFknBases[0]->optFktn ( fArgs.x, fArgs.c );
-
     }
-  else
-    {
-      // cout << "##### fArg2Deriv : reuse" << endl;
-    }
-
-}
-
-
-// ===================================================================
-// ===================================================================
-
-// virtual
-void NLOptWrapper::calcFktnConstrAndDerivNew ( unsigned n, const double *x1, bool useGrad )
-{
-  if ( setXVec ( n, x1 ) )
-    {
-        initLxReg();
-    
-      bool graD = ( useGrad || useGradient );
-
-      // useGradient
-          for ( size_t j=0; j<nThreads; j++ ) {
-              fArgs1[j].x=fArgs.x;
-            }
-
-      double sumF=0.0;  
-          size_t sum1=0;
-          
-          // ORI: #pragma omp parallel shared(optFknBases, fArgs, fArgs1, fArgs2, nDim, mDim, fGrad, graD, sumF, sum1) num_threads(nThreads)
-          #pragma omp parallel default(shared) num_threads(nThreads)
-          {
-            #pragma omp for schedule(static)
-            for (long int i=0; i< nDim; i++ )
-              {
-                size_t j=utl::OmpHelper::getThreadNum();
-
-                double dxFactor = dX[i]*3.0/static_cast<double>(derivRegrNoSteps);
-                
-                double xOld=fArgs1[j].x[i];
-                double half_dx = 0.5/dX[i];
-                
-                // reset all lxreg counters:
-                (*lregxVec[j]).reset();
-                
-                for (size_t k=0; k<mDim; k++) lregxVecC[j][k]->reset();
-                
-                for (int l=0-static_cast<int>(derivRegrNoSteps); l<=static_cast<int>(derivRegrNoSteps); l++) {
-                    double dx=dxFactor*l;
-                    
-                    fArgs1[j].x[i]= ( xOld+dx );
-                    
-                    // function calls
-                    fArgs1[j].f = optFknBases[j]->optFktn ( fArgs1[j].x, fArgs1[j].c );
-
-                    // consider this data point
-                    lregxVec[j]->add(dx, fArgs1[j].f);
-
-                    for ( size_t k=0; k<mDim; k++ )  lregxVecC[j][k]->add(dx, fArgs1[j].c[k]);
-
-                }
-                
-                std::vector<double> coeff;
-                lregxVec[j]->calc(coeff);
-                if (graD) fGrad[i]=coeff[1];
-                
-                #pragma omp atomic
-                sumF+=coeff[0];
-                
-                #pragma omp atomic
-                sum1+=1;
-                
-                for ( size_t k=0; k<mDim; k++ )
-                {
-                    lregxVecC[j][k]->calc(coeff);
-                    if (graD) cGrad[k][i]=coeff[1];
-                    fArgs.c[k]=coeff[0];
-                }
-
-                fArgs1[j].x[i]=xOld;
-                
-              }
-          }
-          
-    
-        // 2.)   call fOld=optF(...)
-        fArgs.f = sumF/static_cast<double>(sum1);
-    }
-  else
-    {
-      // cout << "NLOptWrapper::calcFktnConstrAndDerivNew : fArg2Deriv : reuse" << endl;
-    }
-
-}
 
 
 // ===================================================================

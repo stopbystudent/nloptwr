@@ -9,6 +9,7 @@
 #include <vector>
 #include <functional>
 #include <memory>
+#include <iostream>
 
 namespace opttest
 {
@@ -93,13 +94,20 @@ public:
      */
     virtual oif::OptFknBase* clone() const override;
 
+    /**
+     * print result 
+     * @param x arguments
+     * @param os output stream
+     */
+    void printResult(const std::vector<double>& x, std::ostream& os);
+
 private:
 
     /// dimension of x-vector
     int nDim;
 
     /// number of nonequal constraints
-    const static int mDim=2;
+    const static int mDim=4;
     
     /// left corner
     double x0;

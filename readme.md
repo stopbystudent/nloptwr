@@ -71,6 +71,12 @@ The emun class <b>nloptwr::SSTRAT</b> can have following valid values:
  * ***GM*** = Global meta search strategy is choosen
  * ***LM*** = Local meta search strategy is choosen (sometimes a global search strategy is selected)
 
+Equality constraints (expressed by a pair of nonequal constraints) can be solved by the following strategies (see "nloptwr_test6.cpp").
+
+ * ***LM***
+ * ***R*** 
+ * ***GM*** 
+
 The selected methods also depends on the number of parameters (see ***nloptwr::NLOptWrSearchAlgoParam3*** and ***nloptwr::NLOptWrParamFactory***). 
 
 ### Calculation of gradients
@@ -79,15 +85,7 @@ The numerical calculation can be activated with the flag ***useGrad*** of ***nlo
 The numerical calculation is done automatially in parallel with ***OpenMP***.
 Necessary is a correct working clone method.
 
-The default method of numerical derivation is the 2-point formula.
-
-An experimental feature is an polynom regression. 
-This feature can be activated with 
-the call ***NLOptWrapper::setNewDerivMethod(true)*** method.
-The following parameters can changed:
-
-* NLOptWrapper::setDerivRegrDim(size_t d) // "d" dimension of regression (default: 3)
-* NLOptWrapper::setDerivRegrNoSteps(std::size_t val) // Number of steps: val >= (2*d+1)
+The method of numerical derivation is the 2-point formula.
 
 ## Getting Started
 

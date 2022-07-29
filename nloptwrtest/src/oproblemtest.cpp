@@ -59,26 +59,13 @@ int oproblemtest ( bool log, int dim )
 
   nloptwr::NLOptWrapper optWr ( oProblem, nThr );
   
-  optWr.setNewDerivMethod(true);
-  
   optWr.setXTolRel(0.00000003);
   optWr.setXTolAbs(0.000001);
   // optWr.setXTolRel(0.003);
   // optWr.setTolerance(0.001);
   
 
-  // TODO: Prefered Algorithms do not use derivations
-  
-  optWr.setPreferedAlgorithm( nlopt::LD_MMA, 0, 1000 );
-  // optWr.setPreferedAlgorithm( nlopt::LD_CCSAQ, 0, 1000 );
-  // optWr.setPreferedAlgorithm( nlopt::LD_TNEWTON_PRECOND_RESTART, 0, 0 );
-  // optWr.setPreferedAlgorithm( nlopt::LD_TNEWTON_PRECOND_RESTART, 0, 1000 );
-  // optWr.setPreferedAlgorithm( nlopt::GD_STOGO_RAND, 0, 50);
-  // optWr.setPreferedAlgorithm( nlopt::LD_MMA, 0, 1000);
-  // optWr.setPreferedAlgorithm( nlopt::GN_AGS, 0, 5 );
-  optWr.setPreferedAlgorithm( nlopt::LN_SBPLX, 0, 15);
-  
-  // TODO: Non-Gradient methods do not need a numerical derivation!!!!!!
+  // NOTE: Non-Gradient methods do not need a numerical derivation!!!!!!
   bool useGrad=true;
   bool useAugLagBeforeMlsl=true;
   
@@ -103,8 +90,6 @@ int oproblemtest ( bool log, int dim )
   cout << " } " << endl;
 
 if (true) {  
-  // TODO (loop)
-  if (sStrat.getSearchStrategy()!=nloptwr::SSTRAT::R) optWr.setNewDerivMethod(false);
   // if (sStrat.getSearchStrategy()==nloptwr::R) 
   optWr.calculateInitialStep(1.3);
 
@@ -123,9 +108,6 @@ if (true) {
       cout << algs.at ( i ).getName();
     }
   cout << " } " << endl;
-  
-  // std::vector<double> c(oProblem.getSizeOfX());
-  // double minf2 = oProblem.optFktn(x, c);
 
   x = optWr.getX();
 

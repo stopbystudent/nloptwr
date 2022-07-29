@@ -202,43 +202,6 @@ public:
     
 
     // ------------------------------------------------------------------------------------------------
-    
-    /**
-    * get activation of new derivation method
-    * @return true if new derivation method (regression) is used
-    */    
-    bool getNewDerivMethod() const ;
-
-    /**
-    * activate new derivation method
-    * @param val true means the new derivation method (regression) is used
-    */    
-    void setNewDerivMethod(bool val=true);
-
-    /**
-    * get dimension of regression (2=linear terms; 3=quadratic terms)
-    * @return dimension of regression (of new method)
-    */
-    std::size_t getDerivRegrDim() const;
-
-    /**
-    * set dimension of regression (2=linear terms; 3=quadratic terms)
-    * @param d dimension of regression (of new method)
-    */
-    void setDerivRegrDim(std::size_t d=3);
-
-    /**
-     * get number of steps for regression (the number of data points=2*(number of steps)+)
-     * @return val number of steps
-     */
-    std::size_t getDerivRegrNoSteps() const ;
-
-    /**
-     * number of steps for regression (the number of data points=2*(number of steps)+)
-     * @param val number of steps
-     */
-    void setDerivRegrNoSteps(std::size_t val);
-
     // ------------------------------------------------------------------------------------------------
     
     /**
@@ -444,7 +407,7 @@ private:
     /// tolerance
     std::vector<double> xTolAbs;
 
-    // the minimum objective value, upon return
+    /// the minimum objective value, upon return
     double fOpt;
 
 // =======================================
@@ -519,52 +482,8 @@ private:
         double *cGrad
     );
 
-// =======================================
-
-    /**
-    * internal used method to initialize lregxVec and lregxVecC
-    */
-    void initLxReg();
-    
 
 protected:
-
-    /**
-     * Almost all function calulations are done.
-     * The result of the calulation
-     * is stored in members like
-     * fArgs, fArgs1, fArgs2, and cGrad
-     *
-     * @param n number of optimization parameters
-     * @param x1 optimization parameters
-     * @param useGrad gradient flag
-     */
-    virtual void calcFktnConstrAndDeriv ( unsigned n, const double *x1, bool useGrad );
-    
-    /**
-     * Almost all function calulations are done (old method).
-     * The result of the calulation
-     * is stored in members like
-     * fArgs, fArgs1, fArgs2, and cGrad
-     *
-     * @param n number of optimization parameters
-     * @param x1 optimization parameters
-     * @param useGrad gradient flag
-     */
-    void calcFktnConstrAndDerivOld ( unsigned n, const double *x1, bool useGrad );
-    
-    /**
-     * Almost all function calulations are done (new method).
-     * The result of the calulation
-     * is stored in members like
-     * fArgs, fArgs1, fArgs2, and cGrad
-     *
-     * @param n number of optimization parameters
-     * @param x1 optimization parameters
-     * @param useGrad gradient flag
-     */
-    void calcFktnConstrAndDerivNew ( unsigned n, const double *x1, bool useGrad );
-    
 
     /**
      * factory class to select algorithms
@@ -586,16 +505,6 @@ protected:
      */
     std::size_t derivRegrDim;
     
-    /**
-     * number of steps for regression
-     */
-    std::size_t derivRegrNoSteps;
-
-    /// used for making better derivations of function
-    std::vector< std::shared_ptr<utilx::LRegX> > lregxVec;
-    
-    /// used for making better derivations of constraints
-    std::vector< std::vector< std::shared_ptr<utilx::LRegX> > > lregxVecC;
     
 private:
     

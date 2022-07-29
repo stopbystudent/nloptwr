@@ -32,7 +32,7 @@ void OProblem::initialize () //  double lb, double ub, double xInit )
     init( nDim, 2, 0.1, 5.0, 1.9 );
 
     // initialize special bounds
-    setLb(0, 0.28);
+    setLb(0, -0.5);
     setXInit(0, 0.4234);
     setUb(0, 2.0);
 

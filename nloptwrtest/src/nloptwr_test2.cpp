@@ -46,22 +46,16 @@ int opttest2(int dim, bool useGrad, nloptwr::SSTRAT sStrat=nloptwr::SSTRAT::L, i
     // parallel evaluations need less time
     if (useGrad) maxTimeSec /= static_cast<int>(optWr.getNThreads());
     
-    // avoid smooth with threads in case of random methods
-    if (sStrategy.getSearchStrategy()==nloptwr::SSTRAT::R) optWr.setNewDerivMethod(false);
-
     optWr.calculateInitialStep(1.3);
 
     // set population for stochastic optimization
     optWr.setPopulation(1000);
     
-    // optWr.setPreferedAlgorithm( nlopt::LD_MMA );
+    optWr.setPreferedAlgorithm( nlopt::LD_MMA );
     optWr.setPreferedAlgorithm( nlopt::LD_CCSAQ );
     
     optWr.setDx(1e-10);
-    optWr.setXTolAbs(1e-6
-        
-    );
-    optWr.setXTolRel(1e-8);
+    optWr.setXTolAbs(1e-6);
 
     // start opptimization
     nlopt::result opt_stat = nlopt::result::FAILURE; 
